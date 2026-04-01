@@ -189,6 +189,129 @@ describe('generateDesignTokens', () => {
     const tokens = generateDesignTokens(emptyVisual, emptyTypography, layout)
     expect(tokens.breakpoints['screen-min-768']).toBe('768px')
   })
+
+  it('deduplicates font size token names with numeric suffix when sizes share a bucket', () => {
+    // 11px and 12px are both closest to 'text-xs' (px=12) — distance 1 each
+    // The dedup loop should append -2 for the second
+    const typography: TypographyExtractionResult = {
+      scale: [
+        {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          fontWeight: '400',
+          lineHeight: '1.5',
+          letterSpacing: '0',
+          textTransform: 'none',
+          sampleText: '',
+          usageCount: 5,
+        },
+        {
+          fontFamily: 'Arial',
+          fontSize: '11px',
+          fontWeight: '400',
+          lineHeight: '1.5',
+          letterSpacing: '0',
+          textTransform: 'none',
+          sampleText: '',
+          usageCount: 3,
+        },
+      ],
+      fontFaces: [],
+      fontLoadStrategy: null,
+    }
+    const tokens = generateDesignTokens(emptyVisual, typography)
+    const sizeNames = Object.keys(tokens.typography).filter(k => !k.startsWith('font-'))
+    // All names must be unique
+    expect(new Set(sizeNames).size).toBe(sizeNames.length)
+    // At least one name must end in a numeric suffix
+    expect(sizeNames.some(n => /\-\d+$/.test(n))).toBe(true)
+  })
+
+  it('names border radius 0px as rounded-none', () => {
+    const visual = { ...emptyVisual, borderRadii: ['0px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-none']).toBe('0px')
+  })
+
+  it('names border radius 0 (no unit) as rounded-none', () => {
+    const visual = { ...emptyVisual, borderRadii: ['0'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-none']).toBe('0')
+  })
+
+  it('names border radius 2px as rounded-sm', () => {
+    const visual = { ...emptyVisual, borderRadii: ['2px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-sm']).toBe('2px')
+  })
+
+  it('names border radius 4px as rounded (≤4, >2)', () => {
+    const visual = { ...emptyVisual, borderRadii: ['4px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded']).toBe('4px')
+  })
+
+  it('names border radius 6px as rounded-md (≤6, >4)', () => {
+    const visual = { ...emptyVisual, borderRadii: ['6px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-md']).toBe('6px')
+  })
+
+  it('names border radius 12px as rounded-lg (≤12, >6)', () => {
+    const visual = { ...emptyVisual, borderRadii: ['12px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-lg']).toBe('12px')
+  })
+
+  it('names border radius 9999px as rounded-full', () => {
+    const visual = { ...emptyVisual, borderRadii: ['9999px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-full']).toBe('9999px')
+  })
+
+  it('names border radius 50% as rounded-full', () => {
+    const visual = { ...emptyVisual, borderRadii: ['50%'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-full']).toBe('50%')
+  })
+
+  it('names border radius 13px with fallback rounded-1 (>12)', () => {
+    const visual = { ...emptyVisual, borderRadii: ['13px'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(tokens.borderRadius['rounded-1']).toBe('13px')
+  })
+
+  it('deduplicates colliding border radius names', () => {
+    // 9999px and 50% both map to rounded-full → second becomes rounded-full-2
+    const visual = { ...emptyVisual, borderRadii: ['9999px', '50%'] }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    const names = Object.keys(tokens.borderRadius)
+    expect(names).toContain('rounded-full')
+    expect(names).toContain('rounded-full-2')
+  })
+
+  it('spacing tokens return empty object (not yet implemented)', () => {
+    const tokens = generateDesignTokens(visualWithData, emptyTypography)
+    expect(tokens.spacing).toEqual({})
+  })
+
+  it('shadow count exceeding SHADOW_NAMES length falls back to shadow-N', () => {
+    // SHADOW_NAMES has 5 entries; provide 6 unique shadows
+    const visual: VisualExtractionResult = {
+      ...emptyVisual,
+      shadows: [
+        '0 1px 2px rgba(0,0,0,0.1)',
+        '0 2px 4px rgba(0,0,0,0.1)',
+        '0 4px 8px rgba(0,0,0,0.1)',
+        '0 8px 16px rgba(0,0,0,0.1)',
+        '0 16px 32px rgba(0,0,0,0.1)',
+        '0 24px 48px rgba(0,0,0,0.1)',
+      ],
+    }
+    const tokens = generateDesignTokens(visual, emptyTypography)
+    expect(Object.keys(tokens.shadows)).toHaveLength(6)
+    expect(tokens.shadows['shadow-6']).toBeDefined()
+  })
 })
 
 describe('formatTokens', () => {
@@ -244,5 +367,42 @@ describe('formatTokens', () => {
     const emptyTokens = generateDesignTokens(emptyVisual, emptyTypography)
     const output = formatTokens(emptyTokens, 'tailwind')
     expect(output).toContain('export default')
+  })
+
+  it('css format: every non-comment declaration line starts with --', () => {
+    const output = formatTokens(tokens, 'css')
+    const varLines = output
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && !l.startsWith(':') && !l.startsWith('}') && !l.startsWith('/*'))
+    for (const line of varLines) {
+      expect(line.startsWith('--')).toBe(true)
+    }
+  })
+
+  it('scss format: every variable declaration line starts with $', () => {
+    const output = formatTokens(tokens, 'scss')
+    const varLines = output
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && !l.startsWith('//'))
+    for (const line of varLines) {
+      expect(line.startsWith('$')).toBe(true)
+    }
+  })
+
+  it('scss format: values containing semicolons are sanitized', () => {
+    // A token value with an embedded semicolon should not produce injection
+    const injectionVisual: VisualExtractionResult = {
+      ...emptyVisual,
+      shadows: ['0 1px 2px red; color: evil'],
+    }
+    const badTokens = generateDesignTokens(injectionVisual, emptyTypography)
+    const output = formatTokens(badTokens, 'scss')
+    const lines = output.split('\n').filter(l => l.includes('shadow'))
+    for (const line of lines) {
+      // Should have exactly one semicolon — the terminal one added by formatScss
+      expect(line.split(';').length - 1).toBe(1)
+    }
   })
 })

@@ -5,3 +5,9 @@ thoughts/
 vitest.config.ts
 tsconfig.json
 .gitignore
+
+# Exclude compiled test files from published package
+**/*.test.js
+**/*.test.js.map
+**/*.test.d.ts
+**/*.test.d.ts.map
