@@ -384,6 +384,34 @@ describe('generateComponentInventory — token mapping', () => {
 // Tests: passthrough fields
 // ---------------------------------------------------------------------------
 
+describe('generateComponentInventory — selector deduplication edge cases', () => {
+  it('keeps first occurrence name unchanged, suffixes subsequent duplicates', () => {
+    const input: ComponentExtractionResult = {
+      components: [
+        makeComponent('div.box'),
+        makeComponent('div.box'),
+      ],
+      totalElements: 2,
+    }
+    const result = generateComponentInventory(input)
+    expect(result.components[0].name).toBe('divbox')
+    expect(result.components[1].name).toBe('divbox-2')
+  })
+
+  it('does not suffix unique selectors', () => {
+    const input: ComponentExtractionResult = {
+      components: [
+        makeComponent('button.save'),
+        makeComponent('button.cancel'),
+      ],
+      totalElements: 2,
+    }
+    const result = generateComponentInventory(input)
+    expect(result.components[0].name).toBe('buttonsave')
+    expect(result.components[1].name).toBe('buttoncancel')
+  })
+})
+
 describe('generateComponentInventory — passthrough fields', () => {
   it('preserves selector, html, states, and dimensions on each entry', () => {
     const component = makeComponent('section.hero', {

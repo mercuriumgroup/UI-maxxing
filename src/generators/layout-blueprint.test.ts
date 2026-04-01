@@ -143,4 +143,55 @@ describe('generateLayoutBlueprint', () => {
     const result = generateLayoutBlueprint(input)
     expect(result.rootMaxWidth).toBeNull()
   })
+
+  it('truncates children beyond depth 10 to prevent infinite recursion', () => {
+    function nest(depth: number): LayoutEntry {
+      return makeEntry({
+        selector: `.d${depth}`,
+        display: 'flex',
+        children: depth < 12 ? [nest(depth + 1)] : [],
+      })
+    }
+    const input: LayoutExtractionResult = {
+      containers: [nest(0)],
+      breakpoints: [],
+      rootMaxWidth: null,
+    }
+    const result = generateLayoutBlueprint(input)
+
+    // Walk down through depths 0–10 (guard fires at depth > 10, i.e. depth 11)
+    let node = result.tree[0]
+    for (let i = 0; i < 11; i++) {
+      expect(node.children.length).toBeGreaterThan(0)
+      node = node.children[0]
+    }
+    // node is now at depth 11 (depth > 10 guard fired) — children are truncated
+    expect(node.children).toHaveLength(0)
+  })
+
+  it('ASCII art has no trailing whitespace on any line', () => {
+    const input: LayoutExtractionResult = {
+      containers: [
+        makeEntry({ selector: '.root', display: 'flex', children: [makeEntry({ selector: '.child' })] }),
+      ],
+      breakpoints: [],
+      rootMaxWidth: null,
+    }
+    const result = generateLayoutBlueprint(input)
+    for (const line of result.ascii.split('\n')) {
+      expect(line).toBe(line.trimEnd())
+    }
+  })
+
+  it('breakpoint with null minWidth uses query string as name', () => {
+    const input: LayoutExtractionResult = {
+      containers: [],
+      breakpoints: [
+        makeBreakpoint({ query: 'print', minWidth: null }),
+      ],
+      rootMaxWidth: null,
+    }
+    const result = generateLayoutBlueprint(input)
+    expect(result.breakpoints[0].name).toBe('print')
+  })
 })

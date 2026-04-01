@@ -76,6 +76,85 @@ describe('generateReport', () => {
     expect(html).toContain('--color-primary')
   })
 
+  it('escapes HTML special characters in the URL', async () => {
+    const xssData: ReportData = {
+      ...minimalData,
+      manifest: {
+        ...minimalData.manifest,
+        url: '<script>alert(1)</script>',
+      },
+    }
+    const html = await generateReport(xssData, 'html')
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('escapes all five HTML special characters: & < > " \'', async () => {
+    const data: ReportData = {
+      ...minimalData,
+      manifest: {
+        ...minimalData.manifest,
+        url: 'a&b "c" \'d\' <e>',
+      },
+    }
+    const html = await generateReport(data, 'html')
+    expect(html).toContain('a&amp;b')
+    expect(html).toContain('&quot;c&quot;')
+    expect(html).toContain('&#39;d&#39;')
+    expect(html).toContain('&lt;e&gt;')
+    expect(html).not.toContain('a&b')
+    expect(html).not.toContain('"c"')
+    expect(html).not.toContain("'d'")
+    expect(html).not.toContain('<e>')
+  })
+
+  it('escapes color token values used in inline styles', async () => {
+    // Craft a malicious color value — if unescaped it would close the style attribute
+    const data: ReportData = {
+      ...minimalData,
+      tokens: {
+        colors: { 'bad-token': '"><img src=x onerror=alert(1)>' },
+        typography: {},
+        spacing: {},
+        borderRadius: {},
+        shadows: {},
+        breakpoints: {},
+        transitions: {},
+        zIndex: {},
+      },
+    }
+    const html = await generateReport(data, 'html')
+    // The raw injection string must not appear verbatim (angle brackets and quotes escaped)
+    expect(html).not.toContain('"><img')
+    // The escaped form should appear instead
+    expect(html).toContain('&quot;&gt;&lt;img')
+  })
+
+  it('framework section is omitted when frameworks list is empty', async () => {
+    const data: ReportData = {
+      ...minimalData,
+      frameworkReport: { frameworks: [], cssMethodology: [], componentLibrary: [] },
+    }
+    const html = await generateReport(data, 'html')
+    expect(html).not.toContain('Framework Detection')
+  })
+
+  it('framework section is rendered when frameworks are detected', async () => {
+    const data: ReportData = {
+      ...minimalData,
+      frameworkReport: {
+        frameworks: [{ name: 'React', version: '18.0.0', confidence: 0.95, signals: [] }],
+        cssMethodology: [],
+        componentLibrary: [],
+      },
+    }
+    const html = await generateReport(data, 'html')
+    expect(html).toContain('Framework Detection')
+    expect(html).toContain('React')
+    expect(html).toContain('v18.0.0')
+    expect(html).toContain('95%')
+  })
+
   it('renders typography tokens in markdown', async () => {
     const dataWithTypo: ReportData = {
       ...minimalData,
@@ -102,5 +181,39 @@ describe('generateReport', () => {
     expect(md).toContain('heading-lg')
     expect(md).toContain('Inter')
     expect(md).toContain('2rem')
+  })
+
+  it('HTML Colors section appears before Typography section', async () => {
+    const html = await generateReport(minimalData, 'html')
+    const colorsIdx = html.indexOf('<h2>Colors</h2>')
+    const typoIdx = html.indexOf('<h2>Typography</h2>')
+    expect(colorsIdx).toBeGreaterThan(-1)
+    expect(typoIdx).toBeGreaterThan(-1)
+    expect(colorsIdx).toBeLessThan(typoIdx)
+  })
+
+  it('typography token with empty fontFamily does not crash HTML render', async () => {
+    const data: ReportData = {
+      ...minimalData,
+      tokens: {
+        colors: {},
+        typography: {
+          'text-base': {
+            fontFamily: '',
+            fontSize: '16px',
+            fontWeight: '400',
+            lineHeight: '1.5',
+            letterSpacing: '0',
+          },
+        },
+        spacing: {},
+        borderRadius: {},
+        shadows: {},
+        breakpoints: {},
+        transitions: {},
+        zIndex: {},
+      },
+    }
+    await expect(generateReport(data, 'html')).resolves.not.toThrow()
   })
 })

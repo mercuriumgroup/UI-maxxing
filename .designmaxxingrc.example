@@ -1,0 +1,19 @@
+{
+  "breakpoints": [375, 768, 1024, 1280, 1536],
+  "modules": [
+    "visual",
+    "typography",
+    "layout",
+    "components",
+    "assets",
+    "animations",
+    "behavior",
+    "framework",
+    "network"
+  ],
+  "output": "./designmaxxing-output",
+  "headless": true,
+  "fullPage": true,
+  "timeout": 30000,
+  "viewport": { "width": 1280, "height": 800 }
+}

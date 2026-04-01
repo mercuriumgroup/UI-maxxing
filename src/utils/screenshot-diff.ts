@@ -47,7 +47,7 @@ export async function compareScreenshots(
   const data2 = cropImageData(img2.data, img2.width, width, height)
 
   const diffPixels = pixelmatch(data1, data2, diff.data, width, height, {
-    threshold: 0.1,
+    threshold,
     includeAA: false,
   })
 

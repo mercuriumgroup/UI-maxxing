@@ -2,7 +2,7 @@
 
 **Model**: Sonnet
 **Branch**: `feat/tests-polish`
-**Estimated time**: 30 minutes
+**Estimated time**: 45–60 minutes
 **Dependencies**: All previous phases must be merged to main
 
 ## Objective
@@ -17,457 +17,312 @@ git checkout -b feat/tests-polish
 npm install
 ```
 
-## Step 1: Test Fixture HTML Page
+---
 
-Create `tests/fixtures/test-page.html` — a static HTML page with KNOWN, exact CSS values that tests can assert against:
+## Step 0: Fix Known Bugs (before tests)
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Designmaxxing Test Fixture</title>
-  <style>
-    /* KNOWN VALUES - tests assert these exact values */
+These are real bugs found during Phase 4 review. Fix them first so tests can validate correct behaviour.
 
-    :root {
-      --color-primary: #1a1a2e;
-      --color-secondary: #16213e;
-      --color-accent: #e94560;
-      --color-bg: #ffffff;
-      --color-text: #333333;
-      --color-border: #e0e0e0;
-    }
+### Bug 1 — `compareScreenshots` ignores `threshold` parameter
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.5;
-      color: var(--color-text);
-      background-color: var(--color-bg);
-    }
-
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* Layout: Flex header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: var(--color-primary);
-      color: white;
-    }
-
-    /* Layout: CSS Grid main */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 32px;
-      padding: 48px 0;
-    }
-
-    /* Typography scale */
-    h1 { font-size: 48px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
-    h2 { font-size: 32px; font-weight: 600; line-height: 1.2; }
-    h3 { font-size: 24px; font-weight: 600; line-height: 1.3; }
-    p { font-size: 16px; font-weight: 400; line-height: 1.5; }
-    .caption { font-size: 12px; font-weight: 400; line-height: 1.4; color: #666666; }
-
-    /* Component: Button */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      padding: 12px 24px;
-      font-size: 14px;
-      font-weight: 500;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-    }
-    .btn-primary {
-      background-color: var(--color-accent);
-      color: white;
-    }
-    .btn-primary:hover {
-      background-color: #d63851;
-    }
-    .btn-primary:active {
-      transform: scale(0.98);
-    }
-    .btn-primary:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
-
-    /* Component: Card */
-    .card {
-      border: 1px solid var(--color-border);
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
-      background-color: white;
-    }
-    .card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    /* Component: Input */
-    .input {
-      width: 100%;
-      padding: 10px 16px;
-      font-size: 14px;
-      border: 1px solid var(--color-border);
-      border-radius: 6px;
-      outline: none;
-      transition: border-color 0.2s ease;
-    }
-    .input:focus {
-      border-color: var(--color-accent);
-    }
-
-    /* Animation: Keyframes */
-    @keyframes fadeIn {
-      0% { opacity: 0; transform: translateY(8px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-    .animate-in { animation: fadeIn 0.3s ease-out forwards; }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-      h1 { font-size: 32px; }
-    }
-
-    @media (max-width: 375px) {
-      .container { padding: 0 16px; }
-      .header { padding: 12px 16px; }
-    }
-
-    /* Sticky element */
-    .sidebar {
-      position: sticky;
-      top: 24px;
-    }
-
-    /* Form with validation */
-    .form-field { margin-bottom: 16px; }
-  </style>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">Designmaxxing</div>
-    <nav>
-      <a href="#" style="color: white; margin-left: 24px;">Features</a>
-      <a href="#" style="color: white; margin-left: 24px;">Pricing</a>
-    </nav>
-  </header>
-
-  <div class="container">
-    <div class="main-grid">
-      <main>
-        <h1 class="animate-in">Design Extraction</h1>
-        <p>A paragraph with body text styling.</p>
-        <p class="caption">A caption with smaller text.</p>
-
-        <div style="margin-top: 32px; display: flex; gap: 16px;">
-          <button class="btn btn-primary">Primary Button</button>
-          <button class="btn btn-primary" disabled>Disabled Button</button>
-        </div>
-
-        <div class="card" style="margin-top: 32px;">
-          <h3>Card Component</h3>
-          <p>Card content with known padding and shadow.</p>
-        </div>
-
-        <form style="margin-top: 32px;">
-          <div class="form-field">
-            <label for="email">Email</label>
-            <input class="input" id="email" type="email" required placeholder="you@example.com" pattern="[^@]+@[^@]+\.[^@]+" />
-          </div>
-          <div class="form-field">
-            <label for="name">Name</label>
-            <input class="input" id="name" type="text" required minlength="2" maxlength="100" />
-          </div>
-        </form>
-      </main>
-
-      <aside class="sidebar">
-        <div class="card">
-          <h3>Sidebar</h3>
-          <p>Sticky sidebar content.</p>
-        </div>
-      </aside>
-    </div>
-  </div>
-
-  <!-- SVG icon for asset extraction -->
-  <svg style="display:none">
-    <symbol id="icon-check" viewBox="0 0 24 24">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-    </symbol>
-  </svg>
-</body>
-</html>
-```
-
-## Step 2: Unit Tests — Utilities
-
-Create `tests/utils/color.test.ts`:
-- Test `rgbToHex`: `rgb(26, 26, 46)` → `#1a1a2e`
-- Test `rgbToHsl`: known conversions
-- Test `parseRgb`: various formats including `rgba()`
-- Test `deltaE`: same color → 0, very different colors → high value
-- Test `clusterColors`: group similar colors together
-
-Create `tests/utils/css-parser.test.ts`:
-- Test `parseBoxShadow`: single shadow, multi-shadow, inset shadows
-- Test `parseMarginPadding`: shorthand (1-value, 2-value, 3-value, 4-value)
-- Test `parseTransition`: single and multi-property transitions
-- Test `extractNumericValue`: `"16px"` → 16, `"1.5rem"` → 1.5, `"auto"` → null
-
-Create `tests/utils/dedup.test.ts`:
-- Test `deduplicateValues`: counts duplicates correctly
-- Test `detectScale`: detects 4px and 8px base units, handles non-uniform data
-- Test `suggestTokenName`: generates sensible names from values
-
-## Step 3: Integration Tests — Extractors
-
-Create `tests/extractors/visual.test.ts`:
+**File**: `src/utils/screenshot-diff.ts:50`
+**Problem**: `threshold` is accepted as a parameter but hardcoded to `0.1` in the pixelmatch call.
+**Fix**: Replace `threshold: 0.1` with `threshold`.
 
 ```typescript
-import { test, expect, beforeAll, afterAll } from 'vitest'
-import { chromium, type Browser, type Page } from 'playwright'
-import path from 'path'
-
-let browser: Browser
-let page: Page
-
-beforeAll(async () => {
-  browser = await chromium.launch()
-  const context = await browser.newContext()
-  page = await context.newPage()
-  const fixturePath = path.resolve(__dirname, '../fixtures/test-page.html')
-  await page.goto(`file://${fixturePath}`)
+// Before (line 49-52)
+const diffPixels = pixelmatch(data1, data2, diff.data, width, height, {
+  threshold: 0.1,
+  includeAA: false,
 })
 
-afterAll(async () => {
-  await browser.close()
-})
-
-test('extracts correct colors from fixture', async () => {
-  // Inject extract-colors.js, verify known colors are found:
-  // #1a1a2e, #16213e, #e94560, #ffffff, #333333, #e0e0e0, #666666
-})
-
-test('extracts correct typography scale', async () => {
-  // Inject extract-typography.js, verify:
-  // h1: 48px/700, h2: 32px/600, h3: 24px/600, p: 16px/400, caption: 12px/400
-})
-
-test('detects flex and grid layouts', async () => {
-  // Inject extract-layout.js, verify:
-  // .header → display: flex, justify-content: space-between
-  // .main-grid → display: grid, grid-template-columns: 1fr 300px
-})
-
-test('detects button component with states', async () => {
-  // Inject extract-components.js
-  // Verify .btn-primary is found
-  // Verify hover state changes background-color
-})
-
-test('extracts animation keyframes', async () => {
-  // Inject extract-animations.js
-  // Verify fadeIn keyframes: 0% → opacity:0, translateY(8px); 100% → opacity:1, translateY(0)
-  // Verify .btn transition: background-color 0.2s ease, transform 0.1s ease
-})
-
-test('detects breakpoints', async () => {
-  // Inject extract-layout.js
-  // Verify breakpoints: 768px, 375px detected from media queries
-})
-
-test('detects form validation', async () => {
-  // Inject extract-behavior.js
-  // Verify email input: required, pattern, type=email
-  // Verify name input: required, minlength=2, maxlength=100
-})
-
-test('detects sticky positioning', async () => {
-  // Inject extract-behavior.js
-  // Verify .sidebar: position sticky, top 24px
+// After
+const diffPixels = pixelmatch(data1, data2, diff.data, width, height, {
+  threshold,
+  includeAA: false,
 })
 ```
 
-Create similar test files for each extractor, all using the same fixture.
+---
 
-## Step 4: Integration Test — Token Generation
+## Step 1: HIGH Priority Unit Tests (12 cases)
 
-Create `tests/generators/design-tokens.test.ts`:
+These cover logic that is untested or where a known bug was just fixed.
 
-- Use known extraction data (hardcoded or from fixture extraction)
-- Verify JSON output matches expected token structure
-- Verify CSS output produces valid CSS custom properties
-- Verify Tailwind config output is valid TypeScript
-- Verify SCSS output produces valid SCSS variables
-- Verify spacing scale detection: fixture uses 10, 12, 16, 24, 32, 48px → should detect 4px or 8px base
+### 1a — `escapeHtml` (report.ts)
 
-## Step 5: Integration Test — Full Pipeline
-
-Create `tests/e2e/pipeline.test.ts`:
+`escapeHtml` is a private function but fully exercisable via `generateReport`. Add to `src/generators/report.test.ts`:
 
 ```typescript
-import { test, expect } from 'vitest'
-import { extractAll } from '../../src/extractors/orchestrator.js'
-import { existsSync, readFileSync } from 'fs'
-import path from 'path'
+it('escapes HTML special characters in URL', () => {
+  const result = generateReport(
+    { url: '<script>alert(1)</script>', timestamp: '2024-01-01' },
+    { colors: [], shadows: [], borderRadii: [], spacing: [] },
+    { scale: [], fontFaces: [] },
+    undefined, undefined, undefined, undefined, undefined, undefined,
+    { frameworks: [] },
+  )
+  expect(result).toContain('&lt;script&gt;')
+  expect(result).not.toContain('<script>')
+})
 
-test('full extraction pipeline produces expected output', async () => {
-  const fixturePath = path.resolve(__dirname, '../fixtures/test-page.html')
-  const outputDir = path.resolve(__dirname, '../output-test')
-
-  const manifest = await extractAll({
-    url: `file://${fixturePath}`,
-    output: outputDir,
-    modules: ['visual', 'typography', 'layout', 'components', 'animations', 'behavior'],
-    breakpoints: [375, 768, 1280],
-    headless: true,
-    fullPage: true,
-    timeout: 10000,
-    viewport: { width: 1280, height: 800 },
-  })
-
-  // Verify manifest structure
-  expect(manifest.url).toContain('test-page.html')
-  expect(manifest.modules.length).toBeGreaterThan(0)
-
-  // Verify output files exist
-  expect(existsSync(path.join(outputDir, 'extraction.json'))).toBe(true)
-  expect(existsSync(path.join(outputDir, 'visual.json'))).toBe(true)
-  expect(existsSync(path.join(outputDir, 'typography.json'))).toBe(true)
-  expect(existsSync(path.join(outputDir, 'layout.json'))).toBe(true)
-
-  // Verify screenshots taken
-  expect(existsSync(path.join(outputDir, 'screenshots', '375.png'))).toBe(true)
-  expect(existsSync(path.join(outputDir, 'screenshots', '768.png'))).toBe(true)
-  expect(existsSync(path.join(outputDir, 'screenshots', '1280.png'))).toBe(true)
-
-  // Verify color extraction found known values
-  const visual = JSON.parse(readFileSync(path.join(outputDir, 'visual.json'), 'utf-8'))
-  const hexColors = visual.colors.map(c => c.hex)
-  expect(hexColors).toContain('#1a1a2e')
-  expect(hexColors).toContain('#e94560')
-}, 60000) // 60s timeout for Playwright
-```
-
-## Step 6: README.md
-
-Write a comprehensive README. Sections:
-
-### Quick Start
-```bash
-npx designmaxxing extract https://stripe.com/payments
-```
-
-### Installation
-```bash
-# Global
-npm install -g designmaxxing
-
-# Per-project
-npm install --save-dev designmaxxing
-
-# Claude Code integration
-npx designmaxxing install-claude
-```
-
-### CLI Reference
-Document every command and flag (extract from phase-4 definitions).
-
-### Programmatic API
-```typescript
-import { extractAll } from 'designmaxxing'
-
-const manifest = await extractAll({
-  url: 'https://example.com',
-  modules: ['visual', 'typography', 'layout'],
-  breakpoints: [375, 768, 1280],
+it('escapes all five HTML characters: & < > " \'', () => {
+  // Each must survive a round-trip through escapeHtml
+  // Test via a color token value that contains them
+  // (build a minimal extraction with a crafted color hex that triggers each)
+  const result = generateReport(
+    { url: 'a&b "c" \'d\' <e>', timestamp: '' },
+    { colors: [], shadows: [], borderRadii: [], spacing: [] },
+    { scale: [], fontFaces: [] },
+  )
+  expect(result).toContain('a&amp;b')
+  expect(result).toContain('&quot;c&quot;')
+  expect(result).toContain('&#39;d&#39;')
+  expect(result).toContain('&lt;e&gt;')
 })
 ```
 
-### Claude Code Integration
-- How to install the skill and agents
-- Usage: `/designmaxxing <url>`
-- The 4 agents and when they're used
-- Workflow: extract → analyze → reconstruct → verify
+> Note: Check the actual `generateReport` signature in `src/generators/report.ts` and use
+> the minimal factory that builds the required extraction shapes. Use `makeVisual()` /
+> `makeTypography()` helper pattern from existing tests if possible.
 
-### Configuration
-Document `.designmaxxingrc` format with all options.
+### 1b — `compareScreenshots` threshold (screenshot-diff.test.ts)
 
-### Output Structure
-```
-designmaxxing-output/
-├── extraction.json      # Manifest linking all results
-├── visual.json          # Colors, shadows, borders, spacing
-├── typography.json      # Type scale, font faces
-├── layout.json          # Grid/flex configs, breakpoints
-├── components.json      # Component inventory with states
-├── assets.json          # Asset inventory
-├── animations.json      # Transitions and keyframes
-├── behavior.json        # Scroll, forms, events
-├── framework.json       # Tech stack detection
-├── network.json         # API endpoints
-├── tokens.json          # Generated design tokens
-├── tokens.css           # CSS custom properties
-├── tailwind.config.ts   # Tailwind theme extension
-├── analysis.md          # Human-readable analysis
-├── report.html          # Visual HTML report
-├── screenshots/
-│   ├── 375.png
-│   ├── 768.png
-│   └── 1280.png
-└── assets/
-    ├── fonts/
-    ├── images/
-    └── svgs/
+After applying the Bug 1 fix, verify threshold is forwarded:
+
+```typescript
+it('respects threshold: 0 flags any pixel difference as a diff', async () => {
+  // Use two images that differ only slightly (e.g., one pixel is #FF0000 vs #FF0100)
+  // With threshold=0 this should register as a diff; with threshold=1.0 it should not
+  const dir = tmpdir()
+  const buf1 = makePNG(4, 4, [255, 0, 0, 255])
+  const buf2 = makePNG(4, 4, [255, 1, 0, 255])  // nearly identical
+  const img1 = join(dir, 'thresh-img1.png')
+  const img2 = join(dir, 'thresh-img2.png')
+  const diff0 = join(dir, 'thresh-diff0.png')
+  const diff1 = join(dir, 'thresh-diff1.png')
+  await writeFile(img1, buf1)
+  await writeFile(img2, buf2)
+  const strict = await compareScreenshots(img1, img2, diff0, 0)
+  const lenient = await compareScreenshots(img1, img2, diff1, 1.0)
+  expect(strict.diffPixels).toBeGreaterThan(0)
+  expect(lenient.diffPixels).toBe(0)
+})
 ```
 
-### Troubleshooting
-- Playwright not installed → `npx playwright install chromium`
-- Auth-gated pages → cookie injection guide
-- CORS font blocking → expected, URLs still captured
-- SPA not rendering → `--wait-for-selector` flag
-- Slow extraction → limit modules with `--modules`
+### 1c — `cropImageData` via size-mismatched images (screenshot-diff.test.ts)
 
-## Step 7: Example Config File
+```typescript
+it('handles images with different widths (crops to min)', async () => {
+  const dir = tmpdir()
+  const wide = makePNG(20, 10, [255, 0, 0, 255])
+  const narrow = makePNG(10, 10, [255, 0, 0, 255])
+  const img1 = join(dir, 'wide.png')
+  const img2 = join(dir, 'narrow.png')
+  const diff = join(dir, 'diff-mismatch.png')
+  await writeFile(img1, wide)
+  await writeFile(img2, narrow)
+  const result = await compareScreenshots(img1, img2, diff, 0.1)
+  expect(result.totalPixels).toBe(100)   // 10 × 10, cropped
+  expect(result.diffPixels).toBe(0)      // same color in overlap region
+})
 
-Create `.designmaxxingrc.example`:
-
-```json
-{
-  "breakpoints": [375, 768, 1024, 1280, 1536],
-  "modules": ["visual", "typography", "layout", "components", "assets", "animations", "behavior", "framework", "network"],
-  "output": "./designmaxxing-output",
-  "headless": true,
-  "fullPage": true,
-  "timeout": 30000,
-  "viewport": { "width": 1280, "height": 800 }
-}
+it('handles images with different heights (crops to min)', async () => {
+  const dir = tmpdir()
+  const tall = makePNG(10, 20, [0, 255, 0, 255])
+  const short = makePNG(10, 10, [0, 255, 0, 255])
+  const img1 = join(dir, 'tall.png')
+  const img2 = join(dir, 'short.png')
+  const diff = join(dir, 'diff-height.png')
+  await writeFile(img1, tall)
+  await writeFile(img2, short)
+  const result = await compareScreenshots(img1, img2, diff, 0.1)
+  expect(result.totalPixels).toBe(100)   // 10 × 10, cropped
+  expect(result.diffPixels).toBe(0)
+})
 ```
 
-## Step 8: Polish
+### 1d — Font size name collision suffix (design-tokens.test.ts)
+
+The dedup loop (lines 181–187) appends `-2`, `-3`, etc. when `closestSizeName` returns the same bucket for multiple sizes. This is never triggered in existing tests.
+
+```typescript
+it('deduplicates font size token names with numeric suffix', () => {
+  // Two sizes that both map to the same closestSizeName bucket
+  // e.g. 13px and 14px may both return 'sm' depending on thresholds
+  // Use values that DEFINITELY collide: two sizes that are both <= 12px
+  const visual = makeVisual()
+  const typography = makeTypography([
+    makeScaleEntry({ fontSize: '11px', usageCount: 5 }),
+    makeScaleEntry({ fontSize: '10px', usageCount: 3 }),
+    makeScaleEntry({ fontSize: '9px',  usageCount: 2 }),
+  ])
+  const tokens = generateDesignTokens(visual, typography)
+  const names = Object.keys(tokens.typography)
+  // All three sizes must have unique names
+  expect(new Set(names).size).toBe(names.length)
+  // At least one must end in -2 or -3
+  expect(names.some(n => /\-\d+$/.test(n))).toBe(true)
+})
+```
+
+> Identify the `closestSizeName` thresholds in `src/generators/design-tokens.ts:107` first,
+> then pick sizes that collide in the same bucket.
+
+### 1e — Border radius threshold boundaries (design-tokens.test.ts)
+
+The `normalizeBorderRadiusName` function has thresholds at 0, 2, 4, 6, 12, 9999px and 50%. Test each boundary:
+
+```typescript
+it('names border radii at threshold boundaries', () => {
+  const cases: [string, string][] = [
+    ['0px',     'rounded-none'],
+    ['0',       'rounded-none'],
+    ['2px',     'rounded-sm'],    // ≤ 2
+    ['3px',     'rounded'],       // ≤ 4 but > 2
+    ['4px',     'rounded'],       // ≤ 4
+    ['6px',     'rounded-md'],    // ≤ 6 but > 4
+    ['12px',    'rounded-lg'],    // ≤ 12 but > 6
+    ['13px',    'rounded-1'],     // > 12, index 0 → rounded-1
+    ['9999px',  'rounded-full'],  // ≥ 9999
+    ['50%',     'rounded-full'],
+  ]
+  for (const [input, expected] of cases) {
+    const visual = makeVisual({ borderRadii: [input] })
+    const tokens = generateDesignTokens(visual, makeTypography())
+    expect(Object.keys(tokens.borderRadius)[0]).toBe(expected)
+  }
+})
+```
+
+### 1f — Layout depth limit guard (layout-blueprint.test.ts)
+
+`entryToNode` stops recursing at depth > 10 by returning `children: []`. Not tested.
+
+```typescript
+it('truncates children beyond depth 10', () => {
+  // Build 12-deep nested structure
+  function nest(depth: number): LayoutEntry {
+    return makeEntry({
+      selector: `.d${depth}`,
+      display: 'flex',
+      children: depth < 12 ? [nest(depth + 1)] : [],
+    })
+  }
+  const input: LayoutExtractionResult = {
+    containers: [nest(0)],
+    breakpoints: [],
+    rootMaxWidth: null,
+  }
+  const result = generateLayoutBlueprint(input)
+  // Walk tree to depth 10 — node at depth 11 must have no children
+  let node = result.tree[0]
+  for (let i = 0; i < 10; i++) {
+    expect(node.children.length).toBeGreaterThan(0)
+    node = node.children[0]
+  }
+  // node is now at depth 10 — its children were truncated
+  expect(node.children).toHaveLength(0)
+})
+```
+
+---
+
+## Step 2: MEDIUM Priority Tests (18 cases)
+
+Cover edge cases across generators and CLI.
+
+### 2a — `generateReport` edge cases
+
+- Empty arrays for all extraction fields (no crashes)
+- Typography tokens with missing / empty fontFamily
+- Screenshot section omitted when no breakpoints provided
+- Framework section omitted when `frameworks: []`
+
+### 2b — `generateDesignTokens` edge cases
+
+- Empty visual / typography inputs produce valid empty-object tokens
+- Color token name collisions deduplicated (`color-1`, `color-2`)
+- Shadow count > SHADOW_NAMES length falls back to `shadow-N`
+- Border radius: duplicate raw values deduplicated before naming
+- `buildSpacingTokens` returns `{}` (spacing is not yet implemented — verify it stays that way without error)
+
+### 2c — `generateComponentInventory` edge cases
+
+- Components with no variants return empty `variants: []`
+- Components with no states return empty `states: []`
+- Selector deduplication when the same selector appears twice
+
+### 2d — CLI `tokens` command edge cases
+
+- `--format css` output includes `--` prefix on every variable
+- `--format tailwind` output wraps in valid TypeScript `export default`
+- `--format scss` output starts with `$`
+- Unknown `--format` value produces a useful error message (not a crash)
+
+### 2e — `generateLayoutBlueprint` edge cases
+
+- Breakpoint with `minWidth: null` uses `entry.query` as name
+- `rootMaxWidth` is null when no containers have a maxWidth
+- ASCII art does not include trailing whitespace on any line
+
+---
+
+## Step 3: LOW Priority Tests (7 cases)
+
+Less critical, but rounds out coverage.
+
+### 3a — `report.ts` — token section ordering
+
+- Colors section appears before Typography section in HTML output
+- Typography section appears before Breakpoints section
+
+### 3b — `compareScreenshots` — totalPixels math
+
+- `totalPixels` always equals `width × height` even with cropped images
+
+### 3c — `generateDesignTokens` — `toScss` output
+
+- Every line in SCSS output that is a variable starts with `$`
+- CSS output lines with values containing spaces are quoted correctly
+
+### 3d — `generateComponentInventory` — empty input
+
+- `generateComponentInventory([])` returns `{ components: [], summary: ... }` without error
+
+---
+
+## Step 4: Test Fixture HTML Page
+
+Create `tests/fixtures/test-page.html` — a static HTML page with KNOWN, exact CSS values that tests can assert against. (Content unchanged from original plan — see fixture definition in Step 1 of the original plan.)
+
+---
+
+## Step 5: Integration Tests — Extractors
+
+Create `tests/extractors/visual.test.ts` using the fixture. (Content unchanged from original plan Step 3.)
+
+---
+
+## Step 6: Integration Test — Full Pipeline
+
+Create `tests/e2e/pipeline.test.ts`. (Content unchanged from original plan Step 5.)
+
+---
+
+## Step 7: README.md
+
+Write a comprehensive README. (Content unchanged from original plan Step 6.)
+
+---
+
+## Step 8: Example Config File
+
+Create `.designmaxxingrc.example`. (Content unchanged from original plan Step 7.)
+
+---
+
+## Step 9: Polish
 
 - Ensure `package.json` `bin` field points to correct path
 - Ensure `package.json` `files` includes all necessary dirs
@@ -476,7 +331,9 @@ Create `.designmaxxingrc.example`:
 - Ensure `prepublishOnly` script works: `npm run build && npm run test`
 - Run `npm pack --dry-run` to verify published contents
 
-## Step 9: Verify & Commit
+---
+
+## Step 10: Verify & Commit
 
 ```bash
 npm run build
@@ -490,10 +347,15 @@ git commit -m "feat: tests, fixtures, README, config example — package ready f
 git push -u origin feat/tests-polish
 ```
 
+---
+
 ## Completion Criteria
 
+- [ ] Bug 1 fixed: `compareScreenshots` uses `threshold` param (not hardcoded 0.1)
+- [ ] All 12 HIGH priority cases covered (escapeHtml, cropImageData, threshold, font dedup, border radius boundaries, depth limit)
+- [ ] All 18 MEDIUM priority cases covered
+- [ ] All 7 LOW priority cases covered
 - [ ] Test fixture page has all known values documented in comments
-- [ ] Unit tests cover all utility functions with edge cases
 - [ ] Integration tests verify each extractor against the fixture
 - [ ] Pipeline E2E test runs full extraction and verifies output
 - [ ] All tests pass: `npm run test`
@@ -503,3 +365,17 @@ git push -u origin feat/tests-polish
 - [ ] `npm pack --dry-run` shows correct package contents
 - [ ] `npm run build && npm run test` passes (prepublishOnly)
 - [ ] 80%+ test coverage on utilities and generators
+
+---
+
+## Implementation Order
+
+1. **Step 0** — fix the threshold bug first (unblocks Step 1b)
+2. **Steps 1a–1f** — HIGH priority unit tests (colocated in existing `.test.ts` files)
+3. **Steps 2a–2e** — MEDIUM priority unit tests
+4. **Steps 3a–3d** — LOW priority unit tests
+5. Verify all 67 + new tests pass
+6. **Step 4** — create fixture
+7. **Steps 5–6** — integration + E2E tests (require Playwright, may be slow)
+8. **Steps 7–9** — documentation + polish
+9. **Step 10** — final verify + commit
