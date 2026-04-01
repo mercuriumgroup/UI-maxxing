@@ -1,0 +1,5 @@
+node_modules/
+dist/
+designmaxxing-output/
+*.tsbuildinfo
+.DS_Store
