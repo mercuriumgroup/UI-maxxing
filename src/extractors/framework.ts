@@ -3,6 +3,12 @@ import type { FrameworkDetection } from '../types/extraction.js'
 
 export class FrameworkExtractor extends BaseExtractor<FrameworkDetection> {
   async extract(): Promise<FrameworkDetection> {
-    throw new Error('FrameworkExtractor not implemented')
+    const result = await this.runScript<FrameworkDetection>('detect-framework.js')
+
+    return {
+      frameworks: result.frameworks,
+      cssMethodology: result.cssMethodology,
+      componentLibrary: result.componentLibrary,
+    }
   }
 }

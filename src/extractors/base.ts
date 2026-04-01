@@ -2,6 +2,7 @@ import type { Page } from 'playwright'
 import type { ExtractionConfig } from '../types/config.js'
 import { join } from 'node:path'
 import { ensureDir } from '../utils/fs.js'
+import { loadScript } from './script-loader.js'
 
 export abstract class BaseExtractor<TResult> {
   protected page!: Page
@@ -18,6 +19,11 @@ export abstract class BaseExtractor<TResult> {
       new Function('args', scriptContent + '\nreturn __extract(args)') as (args: unknown) => T,
       args
     )
+  }
+
+  protected async runScript<T>(scriptName: string, args?: unknown): Promise<T> {
+    const content = await loadScript(scriptName)
+    return this.injectScript<T>(content, args)
   }
 
   setPage(page: Page): void {

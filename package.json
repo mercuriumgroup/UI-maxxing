@@ -9,17 +9,18 @@
     "designmaxxing": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc && mkdir -p dist/scripts && cp src/scripts/*.js dist/scripts/",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build && npm run test",
+    "install-claude": "bash scripts/install-claude.sh"
   },
   "keywords": ["reverse-engineering", "design-tokens", "ui", "css", "playwright", "extraction"],
   "license": "MIT",
   "engines": { "node": ">=18" },
-  "files": ["dist", "claude", "scripts", "templates", "README.md"],
+  "files": ["dist", "claude", "scripts", "README.md"],
   "dependencies": {
     "playwright": "^1.48.0",
     "commander": "^12.0.0",

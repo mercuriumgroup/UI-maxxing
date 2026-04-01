@@ -71,26 +71,38 @@ export async function extractAll(config: ExtractionConfig): Promise<ExtractionMa
 
     // Run framework detection first if enabled
     if (config.modules.includes('framework')) {
-      const extractor = await loaders.framework()
-      extractor.setPage(page)
-      const result = await extractor.extract()
-      const outputPath = join(config.output, 'framework.json')
-      await writeJson(outputPath, result)
-      results['framework'] = 'framework.json'
-      frameworkResult = result as FrameworkDetection
+      try {
+        const extractor = await loaders.framework()
+        extractor.setPage(page)
+        const result = await extractor.extract()
+        const outputPath = join(config.output, 'framework.json')
+        await writeJson(outputPath, result)
+        results['framework'] = 'framework.json'
+        frameworkResult = result as FrameworkDetection
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error(`[designmaxxing] Extractor "framework" failed: ${message}`)
+        results['framework'] = `ERROR: ${message}`
+      }
     }
 
-    // Run remaining modules
+    // Run remaining modules (error-isolated per extractor)
     for (const mod of config.modules) {
       if (mod === 'framework') continue
 
-      const extractor = await loaders[mod as ExtractionModule]()
-      extractor.setPage(page)
-      const result = await extractor.extract()
-      const filename = `${mod}.json`
-      const outputPath = join(config.output, filename)
-      await writeJson(outputPath, result)
-      results[mod] = filename
+      try {
+        const extractor = await loaders[mod as ExtractionModule]()
+        extractor.setPage(page)
+        const result = await extractor.extract()
+        const filename = `${mod}.json`
+        const outputPath = join(config.output, filename)
+        await writeJson(outputPath, result)
+        results[mod] = filename
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error(`[designmaxxing] Extractor "${mod}" failed: ${message}`)
+        results[mod] = `ERROR: ${message}`
+      }
     }
 
     // Take screenshots at each breakpoint
