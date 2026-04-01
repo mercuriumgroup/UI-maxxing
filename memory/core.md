@@ -37,8 +37,18 @@ build:   npm run build
 
 ### ADR-003: Phased implementation plan / 2026-04-01
 
-- **Decision**: 5-phase build plan in `.claude/plans/`. Phase 1 (foundation) complete, phases 2-5 pending.
+- **Decision**: 5-phase build plan in `.claude/plans/`. Phase 1 (foundation) complete, Phase 2 (extractors) complete, Phase 3 (Claude integration) complete, phases 4-5 pending.
 - **Rationale**: Each phase is independently testable and commitable.
+
+### ADR-004: Browser-injectable JS scripts / 2026-04-01
+
+- **Decision**: Extraction logic lives in `src/scripts/*.js` (plain JS, not TS) and is loaded into pages via Playwright's `page.evaluate()`. A `ScriptLoader` resolves paths for both dev and packaged usage.
+- **Rationale**: `page.evaluate()` requires serializable functions; keeping extraction logic in separate `.js` files makes them inspectable and testable independently of Playwright.
+
+### ADR-005: Claude Code integration via `claude/` directory / 2026-04-01
+
+- **Decision**: Skill and agent markdown files live in `claude/skill/` and `claude/agents/` and are copied to `~/.claude/` by `scripts/install-claude.sh` (also runnable via `npm run install-claude`).
+- **Rationale**: Keeps Claude integration in the repo alongside the tool it controls. Install script is idempotent.
 
 ## Conventions
 
@@ -53,6 +63,8 @@ build:   npm run build
 ## Known Issues
 
 <!-- Format: - **[Issue]**: [Description] — Workaround: [workaround] -->
+
+- **No test files yet**: Vitest is configured with `passWithNoTests: true` (`src/**/*.test.ts` pattern). Tests will be added in Phase 5.
 
 ## Rejected Alternatives
 
