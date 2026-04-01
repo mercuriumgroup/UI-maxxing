@@ -16,9 +16,9 @@
 ```bash
 install: npm install
 dev:     npm run dev
-test:    npm run test
+test:    npm run test       # vitest, colocated src/**/*.test.ts, passWithNoTests=true
 lint:    npm run lint
-build:   npm run build
+build:   npm run build      # rm -rf dist && tsc && cp src/scripts/*.js dist/scripts/
 ```
 
 ## Architecture Decision Records
@@ -37,15 +37,26 @@ build:   npm run build
 
 ### ADR-003: Phased implementation plan / 2026-04-01
 
-- **Decision**: 5-phase build plan in `.claude/plans/`. Phase 1 (foundation) complete, phases 2-5 pending.
+- **Decision**: 5-phase build plan in `.claude/plans/`. Phase 1 (foundation) complete, Phase 2 (extractors) complete, phases 3-5 pending.
 - **Rationale**: Each phase is independently testable and commitable.
+
+### ADR-004: Injectable scripts as plain .js files / 2026-04-01
+
+- **Decision**: Browser-injectable scripts live in `src/scripts/*.js` (not `.ts`), copied verbatim to `dist/scripts/` at build time.
+- **Rationale**: Scripts run inside the target page's browser context — no Node.js, no TypeScript, no imports. tsc doesn't process them; the build script copies them explicitly.
+
+### ADR-005: DOM lib in tsconfig / 2026-04-01
+
+- **Decision**: Added `"DOM"` to `tsconfig.json` lib array.
+- **Rationale**: `page.evaluate()` callbacks reference DOM globals (getComputedStyle, window, document). Without DOM lib, TypeScript errors on these. The tool is inherently DOM-aware.
 
 ## Conventions
 
 <!-- Discovered by pattern-finder or established by the team -->
 <!-- Format: - **[Convention]**: [Description] (source: [file:line]) -->
 
-- **Extractor pattern**: Each module extends `BaseExtractor<TResult>`, implements `extract()`, gets page via `setPage()` (source: src/extractors/base.ts)
+- **Extractor pattern**: Each module extends `BaseExtractor<TResult>`, implements `extract()`, gets page via `setPage()`. Use `this.runScript('script-name.js', args)` to inject scripts. (source: src/extractors/base.ts)
+- **Script pattern**: Each injectable script defines a single `__extract(args)` function. Loaded at runtime by `script-loader.ts` which checks `dist/scripts/` then `src/scripts/`. (source: src/extractors/script-loader.ts)
 - **Generator pattern**: Pure functions that take extraction results and return formatted output (source: src/generators/)
 - **Type-first**: All interfaces defined in `src/types/` before implementation. Readonly properties throughout.
 - **Zod config**: Runtime validation via `ConfigSchema` and `VerifyConfigSchema` (source: src/types/config.ts)
