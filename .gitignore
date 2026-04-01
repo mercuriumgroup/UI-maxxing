@@ -3,3 +3,8 @@ dist/
 designmaxxing-output/
 *.tsbuildinfo
 .DS_Store
+
+# context-mogging
+thoughts/
+memory/sessions/
+.claude/CLAUDE.md
