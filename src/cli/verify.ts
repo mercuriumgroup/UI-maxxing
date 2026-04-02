@@ -70,12 +70,12 @@ export function createVerifyCommand(): Command {
           const page = await context.newPage()
 
           // Screenshot original
-          await page.goto(originalUrl, { waitUntil: 'networkidle', timeout: 30000 })
+          await page.goto(originalUrl, { waitUntil: 'load', timeout: 30000 })
           const origPath = join(outputDir, `original-${bp}.png`)
           await page.screenshot({ path: origPath, fullPage: true })
 
           // Screenshot rebuild
-          await page.goto(rebuildUrl, { waitUntil: 'networkidle', timeout: 30000 })
+          await page.goto(rebuildUrl, { waitUntil: 'load', timeout: 30000 })
           const rebuildPath = join(outputDir, `rebuild-${bp}.png`)
           await page.screenshot({ path: rebuildPath, fullPage: true })
 

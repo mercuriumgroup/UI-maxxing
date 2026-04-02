@@ -59,7 +59,7 @@ export async function extractAll(config: ExtractionConfig): Promise<ExtractionMa
       await context.tracing.start({ screenshots: false, snapshots: false })
     }
 
-    await page.goto(config.url, { waitUntil: 'networkidle', timeout: config.timeout })
+    await page.goto(config.url, { waitUntil: 'load', timeout: config.timeout })
 
     if (config.waitForSelector) {
       await page.waitForSelector(config.waitForSelector, { timeout: config.timeout })

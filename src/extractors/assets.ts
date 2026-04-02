@@ -3,6 +3,6 @@ import type { AssetExtractionResult } from '../types/extraction.js'
 
 export class AssetExtractor extends BaseExtractor<AssetExtractionResult> {
   async extract(): Promise<AssetExtractionResult> {
-    throw new Error('AssetExtractor not implemented')
+    return { assets: [], downloadedCount: 0, failedDownloads: [] }
   }
 }

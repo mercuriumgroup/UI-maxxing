@@ -1,12 +1,12 @@
 {
   "name": "designmaxxing",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Pixel-perfect UI reverse engineering toolkit — extract design tokens, components, and layout from any web app",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "designmaxxing": "./dist/cli/index.js"
+    "designmaxxing": "dist/cli/index.js"
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
@@ -24,6 +24,11 @@
     "playwright",
     "extraction"
   ],
+  "author": "mercuriumgroup",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mercuriumgroup/UI-maxxing.git"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18"
@@ -34,9 +39,6 @@
     "!dist/**/*.test.js.map",
     "!dist/**/*.test.d.ts",
     "!dist/**/*.test.d.ts.map",
-    "claude",
-    "scripts",
-    "templates",
     "README.md"
   ],
   "dependencies": {
